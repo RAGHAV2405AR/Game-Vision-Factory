@@ -1,0 +1,18 @@
+
+# Python environment
+venv/
+__pycache__/
+*.pyc
+
+# Data and Models (Too large for GitHub)
+data/
+*.pt
+*.zip
+*.mp4
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Any local test files you don't want to share
+test_*.py

@@ -1,0 +1,5 @@
+streamlit
+ultralytics
+opencv-python
+yt-dlp
+pyyaml
