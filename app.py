@@ -9,8 +9,8 @@ from pipeline.cleaning import clean_frames
 from pipeline.labeling import auto_label
 from pipeline.dataset import create_data_yaml, yolo_to_csv
 from pipeline.train import train_model
-
-
+from pipeline.ocr import run_ocr_on_dataset
+from pipeline.visualise_labels import visualise
 if "busy" not in st.session_state:
     st.session_state.busy = False
 
@@ -25,6 +25,7 @@ if "base_dir" not in st.session_state:
 
 if "active_video" not in st.session_state:
     st.session_state.active_video = None
+    
 
 def get_video_id(url: str):
     m = re.search(r"v=([^&]+)", url)
@@ -70,8 +71,9 @@ if gen_btn:
         st.session_state.busy = True
 
         video_id = get_video_id(youtube_url)
-        BASE_DIR = os.path.join("data", "runs", video_id)
-
+        PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+        BASE_RUN_DIR = os.path.join(PROJECT_ROOT, "data", "runs")
+        BASE_DIR = os.path.join(BASE_RUN_DIR, video_id)       
         VIDEO_PATH = os.path.join(BASE_DIR, "video.mp4")
         FRAMES_RAW = os.path.join(BASE_DIR, "frames_raw")
         FRAMES_CLEAN = os.path.join(BASE_DIR, "frames_clean")
@@ -114,16 +116,22 @@ if gen_btn:
             else:
                 st.info("Labels already exist. Skipping auto-labeling.")
 
-            
+              
             create_data_yaml(DATASET_DIR)
 
           
             if not os.path.exists(CSV_PATH):
                 yolo_to_csv(DATASET_DIR, CSV_PATH)
             else:
-                st.info("CSV already exists. Skipping CSV generation.")
+             st.info("CSV already exists. Skipping CSV generation.")
 
-           
+
+            OCR_CSV_PATH = os.path.join(BASE_DIR, "ocr_text.csv")
+            if not os.path.exists(OCR_CSV_PATH):
+                run_ocr_on_dataset(FRAMES_CLEAN, OCR_CSV_PATH)
+            else:
+             st.info("OCR CSV already exists. Skipping OCR.")
+                
             st.session_state.dataset_ready = True
             st.session_state.base_dir = BASE_DIR
             st.session_state.active_video = video_id
@@ -133,10 +141,16 @@ if gen_btn:
         except Exception as e:
             st.session_state.dataset_ready = False
             st.error(f"Pipeline failed: {e}")
+            st.session_state.busy = False
 
-        st.session_state.busy = False
 
-
+            
+visualise_dir = os.path.join(BASE_DIR, "visualized")
+if not os.path.exists(visualise_dir) or not os.listdir(visualise_dir):
+    visualise(BASE_DIR)
+else:
+    st.info("Visualized frames already exist. Skipping.")
+            
 
 if train_btn:
     st.session_state.busy = True
@@ -166,18 +180,38 @@ if st.session_state.dataset_ready and st.session_state.base_dir:
                 "Download Annotations CSV",
                 f,
                 file_name="annotations.csv",
-                mime="text/csv"
-            )
+                mime="text/csv")    
+    ocr_csv_path = os.path.join(BASE_DIR, "ocr_text.csv")
+    if os.path.exists(ocr_csv_path):
+         with open(ocr_csv_path, "rb") as f:
+              st.download_button("Download OCR Text CSV",
+                f,
+                file_name="ocr_text.csv",
+                mime="text/csv")
+            
 
     # YOLO ZIP
-    yolo_zip = os.path.join(BASE_DIR, "yolo_dataset.zip")
-    if not os.path.exists(yolo_zip):
-        zip_dir(BASE_DIR, yolo_zip)
 
+yolo_zip = os.path.join(BASE_DIR, "yolo_dataset.zip")
+if not os.path.exists(yolo_zip):
+    zip_dir(BASE_DIR, yolo_zip)
+
+with open(yolo_zip, "rb") as f:
+    st.download_button("Download YOLO Dataset", f,
+                       file_name="yolo_dataset.zip", mime="application/zip")
+
+# TO:
+yolo_zip = os.path.join(BASE_DIR, "yolo_dataset.zip")
+
+# Delete old zip if it exists so we always create a fresh one
+if os.path.exists(yolo_zip):
+    os.remove(yolo_zip)
+
+# Create the zip first, fully, before opening it
+zip_dir(BASE_DIR, yolo_zip)
+
+# Only open for download after zip is completely written
+if os.path.exists(yolo_zip) and os.path.getsize(yolo_zip) > 0:
     with open(yolo_zip, "rb") as f:
-        st.download_button(
-            "Download YOLO Dataset",
-            f,
-            file_name="yolo_dataset.zip",
-            mime="application/zip"
-        )
+        st.download_button("Download YOLO Dataset", f,
+                           file_name="yolo_dataset.zip", mime="application/zip")

@@ -2,6 +2,7 @@ from ultralytics import YOLO
 import os
 import cv2
 import shutil
+from pipeline.enhance import enhance_frame
 
 def auto_label(*, images_dir, dataset_dir, conf_thresh=0.35):
     images_out = os.path.join(dataset_dir, "images", "train")
@@ -28,7 +29,8 @@ def auto_label(*, images_dir, dataset_dir, conf_thresh=0.35):
 
         shutil.copy(src_img, dst_img)
 
-        results = model(img, conf=conf_thresh, verbose=False)[0]
+        enhanced_img = enhance_frame(img)
+        results = model(enhanced_img, conf=conf_thresh, verbose=False)[0]
         h, w, _ = img.shape
 
         lines = []

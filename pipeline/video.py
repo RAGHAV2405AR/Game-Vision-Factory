@@ -20,4 +20,4 @@ def download_video(youtube_url: str, output_path: str):
         youtube_url
     ]
 
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, stdout=None, stderr=None)
