@@ -3,3 +3,7 @@ ultralytics
 opencv-python
 yt-dlp
 pyyaml
+pytesseract
+numpy
+torch
+torchvision

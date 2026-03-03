@@ -7,11 +7,12 @@
 
 **Automated Gameplay Video → YOLO Dataset → CSV → Trainable Model**
 
-Game Vision Factory is an end-to-end computer vision data pipeline that transforms raw gameplay videos into YOLO-formatted datasets, CSV annotations, and trainable object detection models — **without manual labeling.**
+Game Vision Factory is an end-to-end computer vision pipeline that turns raw gameplay videos into YOLO-formatted datasets, CSV annotations, OCR text extractions, and trainable object detection models — **without any manual labeling.**
 
 ---
 
 ## 📌 Why This Project Exists
+
 In most computer vision projects, the biggest challenge is not the model — it is **data availability and preparation.**
 
 > [!CAUTION]
@@ -20,136 +21,208 @@ In most computer vision projects, the biggest challenge is not the model — it 
 > * Manual annotation is slow, expensive, and impractical.
 > * Dataset engineering usually takes 80% of the project time.
 
-Game Vision Factory addresses this gap by automating the entire pipeline, enabling faster iteration and feasibility testing.
+Game Vision Factory addresses this by automating the entire pipeline, enabling faster iteration and feasibility testing.
 
 ---
 
-## 🧠 How It Works (The Pipeline)
+## 🧠 How It Works
 
-Using **Weak Supervision**, the system leverages pretrained models to "teach" new models, bypassing the manual labeling bottleneck.
-
-### 🧠 Pipeline Overview
+Using **Weak Supervision**, the system leverages pretrained models to generate labels automatically, bypassing the manual labeling bottleneck.
 
 ```mermaid
 graph TD
-    A([fa:fa-youtube YouTube URL]) --> B[Video Download]
+    A([YouTube URL]) --> B[Video Download]
     B --> C[Frame Extraction]
     C --> D[Duplicate Removal]
-    D --> E{Auto-Labeling}
-    E --> F[YOLO Dataset]
-    F --> G[CSV Export]
-    G --> H[Model Training]
-    H --> I((Trained .pt Model))
+    D --> E[Image Enhancement CLAHE + Sharpen]
+    E --> F{Auto-Labeling YOLO}
+    F --> G[YOLO Dataset]
+    G --> H[annotations.csv]
+    G --> I[OCR Text Extraction]
+    I --> J[ocr_text.csv]
+    G --> K[Visualized Frames]
+    G --> L[Model Training]
+    L --> M((Trained .pt Model))
 
     style A fill:#f00,color:#fff
-    style E fill:#636,color:#fff
-    style I fill:#2c5,color:#fff
+    style F fill:#636,color:#fff
+    style M fill:#2c5,color:#fff
 ```
+
+---
+
 ## 🌟 Core Capabilities
 
-    🎥 Smart Ingestion: Accepts YouTube URLs with local caching and resume-safe downloads.
+- 🎥 **Smart Ingestion** — Accepts YouTube URLs with local caching and resume-safe downloads.
+- 🧹 **Data Distillation** — Uses pixel-difference analysis to remove near-duplicate frames.
+- 🖼️ **Image Enhancement** — Applies CLAHE contrast boosting and sharpening before detection so YOLO finds more objects in dark or blurry game scenes.
+- 🧠 **Auto-Annotation** — Uses YOLOv8 to generate bounding boxes. No manual clicking required.
+- 📝 **OCR Extraction** — Runs Tesseract on every frame to capture in-game text (scores, health, ammo, timers) and saves it to a separate CSV.
+- 👁️ **Auto Visualization** — Draws bounding boxes on every frame automatically so you can visually confirm label quality.
+- 📦 **Industry Standard Outputs** — Generates full YOLO directory structures with `data.yaml` and framework-agnostic CSVs.
+- 🌐 **No-Code UI** — Powered by Streamlit for managing the full pipeline from a browser.
 
-    🧹 Data Distillation: Uses pixel-difference analysis to remove near-duplicate frames, ensuring high visual diversity.
-
-    🧠 Auto-Annotation: Uses YOLOv8 to generate bounding boxes. No manual clicking required for early-stage prototypes.
-
-    📦 Industry Standard Outputs: Generates full YOLO directory structures (data.yaml) and framework-agnostic CSVs.
-
-    🌐 No-Code UI: Powered by Streamlit, allowing users to manage state and downloads through a browser.
+---
 
 ## 📁 Project Structure
 
-```text
-
-├── app.py              # Streamlit UI & pipeline orchestration
-├── requirements.txt    # Project dependencies
-├── yolov8n.pt          # Pretrained model weights
-├── pipeline/           # Core logic modules
-│   ├── video.py        # YouTube download logic
-│   ├── frames.py       # Frame extraction (FFmpeg)
-│   ├── cleaning.py     # Redundancy removal
-│   ├── labeling.py     # YOLO auto-labeling
-│   ├── dataset.py      # YAML & CSV generation
-│   └── train.py        # Training wrapper
-├── data/               # Input/Output data storage
-└── tests/              # Unit tests for pipeline
-    ├── test_video.py
-    ├── test_frames.py
-    └── test_cleaning.py
 ```
+├── app.py                   # Streamlit UI and pipeline orchestration
+├── requirements.txt         # Python dependencies
+├── yolov8n.pt               # Pretrained YOLO weights
+├── visualise_labels.py      # Run manually: python visualise_labels.py <video_id>
+├── pipeline/
+│   ├── video.py             # YouTube download
+│   ├── frames.py            # Frame extraction via FFmpeg
+│   ├── cleaning.py          # Duplicate frame removal
+│   ├── enhance.py           # CLAHE + sharpening before YOLO
+│   ├── labeling.py          # YOLO auto-labeling
+│   ├── dataset.py           # data.yaml + CSV generation + train/val split
+│   ├── ocr.py               # Tesseract OCR on frames
+│   ├── visualise_labels.py  # Draw bounding boxes on frames
+│   └── train.py             # Model training wrapper
+└── data/
+    └── runs/
+        └── <video_id>/
+            ├── video.mp4
+            ├── frames_raw/
+            ├── frames_clean/
+            ├── dataset/
+            │   ├── data.yaml
+            │   ├── images/train/
+            │   ├── images/val/
+            │   ├── labels/train/
+            │   └── labels/val/
+            ├── visualized/       ← bounding box preview frames
+            ├── annotations.csv   ← YOLO labels as spreadsheet
+            ├── ocr_text.csv      ← all in-game text detected
+            └── yolo_dataset.zip  ← full dataset ready to share
+```
+
+---
+
+## 📊 Output Files Explained
+
+| File | What it contains | Who uses it |
+|---|---|---|
+| `annotations.csv` | Every bounding box with class name, coordinates, train/val split | Data analysis, non-YOLO frameworks |
+| `ocr_text.csv` | Every piece of text found on screen with position and confidence | Game bots, HUD analytics, score tracking |
+| `visualized/` | Frames with boxes drawn on them | Confirming label quality visually |
+| `yolo_dataset.zip` | Complete YOLO dataset ready to train on | Anyone wanting to train a detector |
+
+---
+
 ## 🛠️ Technology Stack
 
-| Category | Tools & Frameworks |
-| :--- | :--- |
-| **Computer Vision** | ![YOLOv8](https://img.shields.io/badge/YOLOv8-00A6ED?style=for-the-badge&logo=ultralytics&logoColor=white) ![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white) |
-| **Machine Learning** | ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white) ![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white) |
-| **Media Processing** | ![FFmpeg](https://img.shields.io/badge/FFmpeg-007800?style=for-the-badge&logo=ffmpeg&logoColor=white) |
-| **Interface** | ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white) |
-| **Language** | ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) |
-| **Data Format** | ![JSON](https://img.shields.io/badge/JSON-000000?style=for-the-badge&logo=json&logoColor=white) ![CSV](https://img.shields.io/badge/CSV-4169E1?style=for-the-badge&logo=data:image/png;base64,...) |
+| Category | Tools |
+|---|---|
+| **Computer Vision** | YOLOv8, OpenCV |
+| **Machine Learning** | PyTorch, Ultralytics |
+| **OCR** | Tesseract, pytesseract |
+| **Media Processing** | FFmpeg, yt-dlp |
+| **Interface** | Streamlit |
+| **Language** | Python 3.9+ |
 
 ---
 
 ## 🚀 Getting Started
 
-Follow these steps to set up the Game Vision Factory on your local machine.
-
-**1. Clone & Environment:**
-```text
+**1. Clone and create virtual environment:**
+```bash
 git clone <repository-url>
 cd <repository-directory>
-
-Create a virtual environment**
-
 python -m venv venv
 
-Activate it**
-
-On Windows:
+# Windows
 venv\Scripts\activate
 
-On Mac/Linux:
+# Mac/Linux
 source venv/bin/activate
 ```
-**2. Install FFmpeg (System Dependency)**
-Since your pipeline uses FFmpeg for high-speed frame extraction, you must install it on your OS:
 
-| OS | Installation Command / Instructions |
-| :--- | :--- |
-| **Windows** | Download from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/), extract, and add the `bin` folder to your **System PATH**. |
-| **macOS** | `brew install ffmpeg` |
-| **Linux (Ubuntu)** | `sudo apt update && sudo apt install ffmpeg` |
+**2. Install FFmpeg:**
 
+| OS | Command |
+|---|---|
+| Windows | Download from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/), extract, add `bin` to PATH |
+| macOS | `brew install ffmpeg` |
+| Linux | `sudo apt install ffmpeg` |
 
+**3. Install Tesseract:**
 
-**3. Install Python Packages**
-```text
-pip install --upgrade pip
-pip install ultralytics opencv-python-headless streamlit yt-dlp pandas numpy torch torchvision
+| OS | Command |
+|---|---|
+| Windows | Download from [UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki) |
+| macOS | `brew install tesseract` |
+| Linux | `sudo apt install tesseract-ocr` |
+
+After installing, set the path in `pipeline/ocr.py`:
+```python
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 ```
-**[!TIP]**
-*Use opencv-python-headless if you are running this on a server or Docker without a GUI. Use opencv-python if you need to pop up local windows for debugging!
 
-**4. Launch the App**
-```text
+**4. Install Python packages:**
+```bash
+pip install ultralytics opencv-python streamlit yt-dlp pandas numpy torch torchvision pytesseract pyyaml
+```
+
+**5. Launch:**
+```bash
 streamlit run app.py
 ```
-**📄 Your requirements.txt**
-
--- ultralytics>=8.0.0
--- opencv-python
--- streamlit
--- yt-dlp
--- pandas
--- numpy
-
-
-
-
 
 ---
-### 📦 Key Dependencies
-* `ultralytics` : Core engine for running the **YOLOv8** object detection model.
-* `opencv-python` : Handles all image manipulation and video frame buffering.
-* `numpy` : High-performance numerical operations for frame cleaning logic.
-* `torch` : The deep learning backend required for model training.
+
+## ✅ How to Confirm Dataset Quality
+
+Run the visualizer on any completed video:
+```bash
+python pipeline/visualise_labels.py <video_id>
+```
+
+Open the `data/runs/<video_id>/visualized/` folder and check:
+
+| Good signs ✅ | Bad signs ❌ |
+|---|---|
+| Tight boxes around objects | Boxes on empty background |
+| Correct class labels | Wrong labels on objects |
+| Most frames have detections | Most frames empty |
+| Val folder has different images than train | Same images in train and val |
+
+---
+
+## 🤖 Training a Model on the Dataset
+
+```python
+from ultralytics import YOLO
+
+model = YOLO("yolov8n.pt")
+
+model.train(
+    data="data/runs/<video_id>/dataset/data.yaml",
+    epochs=50,
+    imgsz=640
+)
+```
+
+After training, use the model:
+```python
+trained_model = YOLO("runs/detect/train/weights/best.pt")
+results = trained_model("any_game_screenshot.jpg")
+```
+
+---
+
+## 📄 Requirements
+
+```
+streamlit
+ultralytics
+opencv-python
+yt-dlp
+pyyaml
+pytesseract
+numpy
+torch
+torchvision
+```
