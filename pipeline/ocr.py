@@ -11,8 +11,6 @@ def read_text_from_frame(img, min_confidence=60):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # Scale the image up 2x before OCR
-    # Game UI text is often very small (like 12-16px).
-    # Tesseract struggles with tiny text. Making it bigger helps a lot.
     scale = 2
     bigger = cv2.resize(gray, None, fx=scale, fy=scale,
                         interpolation=cv2.INTER_CUBIC)
@@ -52,13 +50,13 @@ def read_text_from_frame(img, min_confidence=60):
         w_in_scaled = raw_data["width"][i]
         h_in_scaled = raw_data["height"][i]
 
-        # Scale the coordinates back down to the original image size
+      
         x = x_in_scaled // scale
         y = y_in_scaled // scale
         w = w_in_scaled // scale
         h = h_in_scaled // scale
 
-        # Normalize to 0.0-1.0 range 
+     
         x_center_normalized = (x + w / 2) / image_width
         y_center_normalized = (y + h / 2) / image_height
         width_normalized    = w / image_width
@@ -77,19 +75,7 @@ def read_text_from_frame(img, min_confidence=60):
 
 
 def run_ocr_on_dataset(images_dir, output_csv_path, min_confidence=60):
-    """
-    Runs OCR on every image in a folder and saves all the text it finds to a CSV.
-
-    This gives you a second CSV alongside your YOLO annotations CSV.
-    You can open it in Excel to see what text appears in your game frames
-    and where on screen it appears.
-
-    Parameters:
-        images_dir       - folder containing your .jpg frames
-        output_csv_path  - where to save the resulting CSV file
-        min_confidence   - only save text Tesseract is this % sure about
-    """
-
+   
     all_rows = []
 
     # Get all jpg files in the folder, sorted by name
@@ -127,15 +113,13 @@ def run_ocr_on_dataset(images_dir, output_csv_path, min_confidence=60):
                 detection["height"]
             ])
 
-        # Print progress every 20 images so you know it's working
+       
         if count % 20 == 0:
             print("Progress:", count, "/", total)
-
-    # Write everything to CSV
+            
     with open(output_csv_path, "w", newline="") as f:
         writer = csv.writer(f)
 
-        # Header row
         writer.writerow([
             "image_name",
             "text",
@@ -146,7 +130,6 @@ def run_ocr_on_dataset(images_dir, output_csv_path, min_confidence=60):
             "height"
         ])
 
-        # Data rows
         for row in all_rows:
             writer.writerow(row)
 
