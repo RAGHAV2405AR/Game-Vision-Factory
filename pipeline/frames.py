@@ -3,8 +3,7 @@ import subprocess
 import shutil
 
 
-FFMPEG_PATH = "ffmpeg"
-FFMPEG_PATH = r"C:\ffmpeg-8.0.1-essentials_build\bin\ffmpeg.exe"
+FFMPEG_PATH = os.environ.get("FFMPEG_PATH", r"C:\ffmpeg-8.0.1-essentials_build\bin\ffmpeg.exe")
 
 def extract_frames(video_path, output_dir, fps, max_frames=300):
     """

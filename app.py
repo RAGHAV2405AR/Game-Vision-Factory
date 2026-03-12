@@ -80,7 +80,7 @@ if gen_btn:
         LABELS_DIR = os.path.join(BASE_DIR, "labels")
         DATASET_DIR = os.path.join(BASE_DIR, "dataset")
         CSV_PATH = os.path.join(BASE_DIR, "annotations.csv")
-
+        VISUAL_DIR = os.path.join(BASE_DIR, "visualized")
         try:
             os.makedirs(FRAMES_RAW, exist_ok=True)
             os.makedirs(FRAMES_CLEAN, exist_ok=True)
@@ -141,16 +141,8 @@ if gen_btn:
         except Exception as e:
             st.session_state.dataset_ready = False
             st.error(f"Pipeline failed: {e}")
-            st.session_state.busy = False
-
-
             
-visualise_dir = os.path.join(BASE_DIR, "visualized")
-if not os.path.exists(visualise_dir) or not os.listdir(visualise_dir):
-    visualise(BASE_DIR)
-else:
-    st.info("Visualized frames already exist. Skipping.")
-            
+        st.session_state.busy = False
 
 if train_btn:
     st.session_state.busy = True
@@ -162,11 +154,15 @@ if train_btn:
         train_model(DATA_YAML, epochs)
         st.session_state.model_ready = True
         st.success("Model training completed!")
-
+        if not os.path.exists(VISUAL_DIR) or not os.listdir(VISUAL_DIR):
+                visualise(BASE_DIR)
+        else:
+                st.info("Visualized frames already exist. Skipping.")
     except Exception as e:
-        st.error(str(e))
-
-    st.session_state.busy = False
+        st.session_state.model_ready = False
+        st.error(f"Model training failed: {e}")
+    finally:
+        st.session_state.busy = False
 
 
 if st.session_state.dataset_ready and st.session_state.base_dir:
@@ -190,28 +186,12 @@ if st.session_state.dataset_ready and st.session_state.base_dir:
                 mime="text/csv")
             
 
-    # YOLO ZIP
-
-yolo_zip = os.path.join(BASE_DIR, "yolo_dataset.zip")
-if not os.path.exists(yolo_zip):
+if st.session_state.dataset_ready:
+    yolo_zip = os.path.join(BASE_DIR, "yolo_dataset.zip")
+    if os.path.exists(yolo_zip):
+        os.remove(yolo_zip)
     zip_dir(BASE_DIR, yolo_zip)
-
-with open(yolo_zip, "rb") as f:
-    st.download_button("Download YOLO Dataset", f,
-                       file_name="yolo_dataset.zip", mime="application/zip")
-
-# TO:
-yolo_zip = os.path.join(BASE_DIR, "yolo_dataset.zip")
-
-# Delete old zip if it exists so we always create a fresh one
-if os.path.exists(yolo_zip):
-    os.remove(yolo_zip)
-
-# Create the zip first, fully, before opening it
-zip_dir(BASE_DIR, yolo_zip)
-
-# Only open for download after zip is completely written
-if os.path.exists(yolo_zip) and os.path.getsize(yolo_zip) > 0:
-    with open(yolo_zip, "rb") as f:
-        st.download_button("Download YOLO Dataset", f,
-                           file_name="yolo_dataset.zip", mime="application/zip")
+    if os.path.exists(yolo_zip) and os.path.getsize(yolo_zip) > 0:
+        with open(yolo_zip, "rb") as f:
+            st.download_button("Download YOLO Dataset", f,
+                 file_name="yolo_dataset.zip", mime="application/zip")

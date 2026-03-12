@@ -1,7 +1,11 @@
 import cv2
 import os
 import sys
-from dataset import COCO_NAMES
+
+try:
+    from pipeline.dataset import COCO_NAMES
+except ImportError:
+    from dataset import COCO_NAMES
 
 COLORS = [
     (255, 0,   0), (0, 255,   0), (0,   0, 255), (255, 255,   0),
@@ -18,11 +22,11 @@ def visualise(base_dir):
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
     all_images = sorted([f for f in os.listdir(IMAGES_FOLDER) if f.endswith(".jpg")])
-    print("Drawing boxes on", len(all_images), "frames...")
+    print("Drawing boxes on", len(all_images), "frames")
 
     for img_filename in all_images:
 
-        img        = cv2.imread(os.path.join(IMAGES_FOLDER, img_filename))
+        img= cv2.imread(os.path.join(IMAGES_FOLDER, img_filename))
         label_path = os.path.join(LABELS_FOLDER, img_filename.replace(".jpg", ".txt"))
 
         if img is None:

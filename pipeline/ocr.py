@@ -2,7 +2,11 @@ import cv2
 import csv
 import os
 import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+TESSERACT_PATH = os.environ.get("TESSERACT_PATH", r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+
+
 def read_text_from_frame(img, min_confidence=60):
     image_height = img.shape[0]
     image_width  = img.shape[1]
